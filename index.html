@@ -103,6 +103,14 @@ main { flex: 1; padding-block: 12px 96px; min-width: 0; }
 .opp { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .opp label { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-size: 15px; }
 .opp input { flex: 1; min-width: 0; min-height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); padding: 0 12px; font: inherit; }
+.away { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; margin-bottom: 10px; padding: 8px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel-2); text-align: left; }
+.away:active { background: var(--accent-soft); border-color: var(--accent); }
+.away .lbl { flex: 1; min-width: 0; font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; font-size: 16px; color: var(--muted); overflow-wrap: anywhere; line-height: 1.1; }
+.away .lbl b { display: block; color: var(--silver); font-size: 22px; letter-spacing: .06em; }
+.away .cnt { font-family: var(--font-display); font-weight: 700; font-size: 44px; line-height: 1; font-variant-numeric: tabular-nums; }
+.away .minus { min-width: 48px; min-height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); font-size: 26px; }
+.sub { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-size: 14px; }
+.sub b { color: var(--fg); font-size: 20px; margin-left: 4px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
 .tile {
   position: relative; min-height: 118px; border-radius: 14px; border: 2px solid var(--line);
@@ -160,6 +168,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
       <div class="brand" id="brand">Home shots on goal</div>
       <div class="total"><b id="total">0</b><span>shots</span></div>
     </div>
+    <div class="sub" id="awaySub">Away<b id="awayTotal">0</b></div>
     <div class="periods" id="periods" role="group" aria-label="Period"></div>
   </header>
 
@@ -170,8 +179,11 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
         <div class="actions"><button class="btn primary" id="incomingYes">Use this roster</button><button class="btn" id="incomingNo">No thanks</button></div>
       </div>
       <div class="banner" id="exampleBanner" hidden>These jersey numbers are examples. Open Roster and replace them with your team.</div>
-      <div class="opp"><label for="awayCount">Opponent</label><input id="awayCount" maxlength="28" placeholder="Type the other team" autocomplete="off"></div>
-      <div class="opp"><label for="gameDate">Date</label><input id="gameDate" type="date"></div>
+      <div class="away" id="awayTile" role="button" tabindex="0" aria-label="Add an away shot">
+        <div class="lbl">Away<b id="awayLbl">Opponent</b></div>
+        <div class="cnt" id="awayCnt">0</div>
+        <button class="minus" id="awayMinus" aria-label="Remove an away shot">&minus;</button>
+      </div>
       <div class="grid" id="grid"></div>
       <div class="actions">
         <button class="btn primary" id="teamShot">Team shot, no player</button>
@@ -182,16 +194,15 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
 
     <section id="view-roster" hidden>
       <div class="card">
-        <h2>Team names</h2>
+        <h2>Your team name</h2>
         <div class="form-row">
           <input id="homeName" maxlength="28" placeholder="Your team" aria-label="Your team name" style="flex:1;min-width:140px">
-          <input id="awayName" maxlength="28" placeholder="Opponent" aria-label="Opponent name" style="flex:1;min-width:140px">
         </div>
         <div class="notice" id="teamNotice" aria-live="polite">Saved as you type.</div>
       </div>
       <div class="card">
         <h2>Share this roster</h2>
-        <p class="muted">Make one link that carries your roster and team names. Anyone who opens it can load the same roster on their own device. Shots are not shared.</p>
+        <p class="muted">Make one link that carries your roster and team name. Anyone who opens it can load the same roster on their own device. Shots are not shared.</p>
         <div class="actions" style="margin-top:0">
           <button class="btn primary" id="shareMake">Make share link</button>
           <button class="btn" id="shareCopy">Copy link</button>
@@ -236,9 +247,20 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
       <p class="muted">The roster is saved on this device and stays when you start a new game.</p>
     </section>
 
+    <section id="view-setup" hidden>
+      <div class="card">
+        <h2>Game details</h2>
+        <p class="muted">Who are you playing and when? This shows at the top of your totals and in the saved file.</p>
+        <div class="opp"><label for="setOpp">Opponent</label><input id="setOpp" maxlength="28" placeholder="Type the other team" autocomplete="off"></div>
+        <div class="opp"><label for="setDate">Date</label><input id="setDate" type="date"></div>
+        <div class="actions"><button class="btn primary" id="setupGo">Start counting</button></div>
+      </div>
+    </section>
+
     <section id="view-summary" hidden>
       <div class="card">
         <h2>This game</h2>
+        <div class="actions" style="margin-top:0;margin-bottom:10px"><button class="btn" id="editGame">Change opponent or date</button></div>
         <div class="table-wrap"><table id="sumTable"></table></div>
       </div>
       <div class="card">
@@ -253,7 +275,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
       </div>
       <div class="card">
         <h2>New game</h2>
-        <p class="muted">Clears this game's shots, the opponent name and the date. Your roster and team name stay.</p>
+        <p class="muted">Clears this game's shots and asks for the next opponent and date. Your roster and team name stay.</p>
         <div class="actions" style="margin-top:0">
           <button class="btn danger" id="newGame">Start new game</button>
           <button class="btn danger" id="confirmNew" hidden>Yes, clear all shots</button>
@@ -282,10 +304,14 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
       var raw = localStorage.getItem(KEY);
       if (raw) {
         var s = JSON.parse(raw);
-        if (s && Array.isArray(s.roster) && Array.isArray(s.shots)) return s;
+        if (s && Array.isArray(s.roster) && Array.isArray(s.shots)) {
+          if (!Array.isArray(s.awayShots)) s.awayShots = [];
+          if (!s.setup && (s.shots.length || s.awayShots.length || s.away)) s.setup = true;
+          return s;
+        }
       }
     } catch (e) {}
-    return {roster: EXAMPLE.slice(), example: true, period: 0, shots: [], home: "", away: ""};
+    return {roster: EXAMPLE.slice(), example: true, period: 0, shots: [], awayShots: [], home: "", away: ""};
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
 
@@ -303,6 +329,11 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
   function periodTotal(p) {
     var c = 0;
     for (var i = 0; i < state.shots.length; i++) if (state.shots[i].p === p) c++;
+    return c;
+  }
+  function awayFor(p) {
+    var c = 0;
+    for (var i = 0; i < state.awayShots.length; i++) if (p === undefined || state.awayShots[i] === p) c++;
     return c;
   }
   function sortedRoster() {
@@ -349,6 +380,9 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
 
   function renderTotals() {
     totalEl.textContent = state.shots.length;
+    $("awayTotal").textContent = awayFor();
+    $("awayCnt").textContent = awayFor();
+    $("awayLbl").textContent = (state.away || "").trim() || "Opponent";
     var h = (state.home || "").trim(), a = (state.away || "").trim();
     $("brand").textContent = h && a ? h + " vs " + a : h ? h + " shots on goal" : a ? "vs " + a : "Home shots on goal";
   }
@@ -368,7 +402,8 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     }).join("");
     var teamRow = team ? "<tr><td>No player</td>" + unTotals + "<td class='t'>" + team + "</td></tr>" : "";
     var allRow = "<tr><td class='t'>All shots</td>" + PERIODS.map(function (_, p) { return "<td class='t'>" + periodTotal(p) + "</td>"; }).join("") + "<td class='t'>" + state.shots.length + "</td></tr>";
-    $("sumTable").innerHTML = head + rows + teamRow + allRow;
+    var awayRow = "<tr><td class='t'>Away shots</td>" + PERIODS.map(function (_, p) { return "<td>" + awayFor(p) + "</td>"; }).join("") + "<td class='t'>" + awayFor() + "</td></tr>";
+    $("sumTable").innerHTML = head + rows + teamRow + allRow + awayRow;
     $("copyText").textContent = summaryText();
   }
 
@@ -378,6 +413,8 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     lines.splice(0, 0, "Date: " + (state.date || today()));
     var pt = PERIODS.map(function (p, i) { return p + ": " + periodTotal(i); }).join("  ");
     lines.push("By period  " + pt);
+    lines.push("Away shots: " + awayFor());
+    lines.push("Away by period  " + PERIODS.map(function (p, i) { return p + ": " + awayFor(i); }).join("  "));
     sortedRoster().forEach(function (pl) {
       var c = countFor(pl.n);
       if (c > 0) lines.push("#" + pl.n + (pl.name ? " " + pl.name : "") + "  " + c);
@@ -442,6 +479,21 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     $("countNotice").textContent = "#" + n + " has no shots to remove.";
   }
 
+  function addAway() {
+    state.awayShots.push(state.period); save(); render();
+    $("countNotice").textContent = "Away shot added.";
+  }
+  function removeAway() {
+    for (var i = state.awayShots.length - 1; i >= 0; i--) {
+      if (state.awayShots[i] === state.period) { state.awayShots.splice(i, 1); save(); render(); $("countNotice").textContent = "Took an away shot off."; return; }
+    }
+    $("countNotice").textContent = "No away shots in this period to remove.";
+  }
+  $("awayTile").addEventListener("click", addAway);
+  $("awayTile").addEventListener("keydown", function (e) {
+    if (e.target === $("awayTile") && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); addAway(); }
+  });
+  $("awayMinus").addEventListener("click", function (e) { e.stopPropagation(); removeAway(); });
   $("teamShot").addEventListener("click", function () { addShot(null); });
   $("undo").addEventListener("click", function () {
     var s = state.shots.pop();
@@ -456,7 +508,6 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     var q = new URLSearchParams();
     q.set("roster", r);
     if ((state.home || "").trim()) q.set("home", state.home.trim());
-    if ((state.away || "").trim()) q.set("away", state.away.trim());
     return location.origin + location.pathname + "#" + q.toString();
   }
   function decodeShare(link) {
@@ -475,13 +526,13 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
       roster.push({n: n, name: m[2].trim().slice(0, 24)});
     });
     if (!roster.length) return null;
-    return {roster: roster, home: (q.get("home") || "").slice(0, 28), away: (q.get("away") || "").slice(0, 28)};
+    return {roster: roster, home: (q.get("home") || "").slice(0, 28)};
   }
   function applyShared(sh) {
     state.roster = sh.roster; state.example = false;
-    state.home = sh.home; state.away = sh.away;
+    state.home = sh.home;
     save(); render();
-    $("homeName").value = state.home; $("awayName").value = state.away; $("awayCount").value = state.away;
+    $("homeName").value = state.home;
   }
   $("shareMake").addEventListener("click", function () {
     $("shareBox").value = encodeShare();
@@ -508,19 +559,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
   }
 
   $("homeName").value = state.home || "";
-  $("awayName").value = state.away || "";
-  $("gameDate").value = state.date || today();
-  $("gameDate").addEventListener("input", function () { state.date = $("gameDate").value; save(); renderSummary(); });
-  $("awayCount").value = state.away || "";
-  function saveNames(from) {
-    state.home = $("homeName").value;
-    if (from === "count") { state.away = $("awayCount").value; $("awayName").value = state.away; }
-    else { state.away = $("awayName").value; $("awayCount").value = state.away; }
-    save(); renderTotals(); renderSummary();
-  }
-  $("homeName").addEventListener("input", function () { saveNames("roster"); });
-  $("awayName").addEventListener("input", function () { saveNames("roster"); });
-  $("awayCount").addEventListener("input", function () { saveNames("count"); });
+  $("homeName").addEventListener("input", function () { state.home = $("homeName").value; save(); renderTotals(); renderSummary(); });
 
   $("bulkAdd").addEventListener("click", function () {
     var note = $("bulkNotice");
@@ -624,12 +663,10 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
   function resetNewGame() { $("newGame").hidden = false; $("confirmNew").hidden = true; $("cancelNew").hidden = true; }
   $("cancelNew").addEventListener("click", resetNewGame);
   $("confirmNew").addEventListener("click", function () {
-    state.shots = []; state.period = 0; state.away = "";
-    $("awayName").value = ""; $("awayCount").value = "";
-    state.date = ""; $("gameDate").value = today();
+    state.shots = []; state.awayShots = []; state.period = 0; state.away = "";
+    state.date = ""; state.setup = false;
     save(); resetNewGame(); render();
-    $("countNotice").textContent = "New game started.";
-    show("count");
+    openSetup();
   });
 
   var views = ["count", "summary", "roster"];
@@ -638,9 +675,25 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
       $("view-" + v).hidden = v !== name;
       $("tab-" + v).setAttribute("aria-selected", String(v === name));
     });
+    $("view-setup").hidden = name !== "setup";
     window.scrollTo(0, 0);
   }
   views.forEach(function (v) { $("tab-" + v).addEventListener("click", function () { show(v); }); });
+
+  function openSetup() {
+    $("setOpp").value = state.away || "";
+    $("setDate").value = state.date || today();
+    show("setup");
+  }
+  $("editGame").addEventListener("click", openSetup);
+  $("setupGo").addEventListener("click", function () {
+    state.away = $("setOpp").value.trim();
+    state.date = $("setDate").value || today();
+    state.setup = true;
+    save(); render();
+    show("count");
+    $("countNotice").textContent = "Ready to count.";
+  });
 
   // Keep the screen awake while counting. Ignored if the browser refuses.
   var lock = null;
@@ -670,6 +723,8 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     try {
       var s = JSON.parse(decodeURIComponent(escape(atob($("backupBox").value.trim()))));
       if (!s || !Array.isArray(s.roster) || !Array.isArray(s.shots)) throw new Error("bad");
+      if (!Array.isArray(s.awayShots)) s.awayShots = [];
+      s.setup = true;
       state = s; save(); render();
       note.textContent = "Restored " + state.roster.length + " players and " + state.shots.length + " shots.";
     } catch (e) { note.textContent = "That code did not work. Paste the whole backup code and try again."; }
@@ -692,13 +747,13 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     state.builtIn = v;
     save(); render();
     $("homeName").value = state.home || "";
-    $("awayCount").value = state.away || "";
   }
   try {
     fetch("roster.json", {cache: "no-cache"}).then(function (r) { return r.ok ? r.json() : null; }).then(applyBuiltIn).catch(function () {});
   } catch (e) {}
 
   render();
+  if (!state.setup) openSetup();
 })();
 </script>
 </body>
