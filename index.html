@@ -171,6 +171,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
       </div>
       <div class="banner" id="exampleBanner" hidden>These jersey numbers are examples. Open Roster and replace them with your team.</div>
       <div class="opp"><label for="awayCount">Opponent</label><input id="awayCount" maxlength="28" placeholder="Type the other team" autocomplete="off"></div>
+      <div class="opp"><label for="gameDate">Date</label><input id="gameDate" type="date"></div>
       <div class="grid" id="grid"></div>
       <div class="actions">
         <button class="btn primary" id="teamShot">Team shot, no player</button>
@@ -252,7 +253,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
       </div>
       <div class="card">
         <h2>New game</h2>
-        <p class="muted">Clears this game's shots and the opponent name. Your roster and team name stay.</p>
+        <p class="muted">Clears this game's shots, the opponent name and the date. Your roster and team name stay.</p>
         <div class="actions" style="margin-top:0">
           <button class="btn danger" id="newGame">Start new game</button>
           <button class="btn danger" id="confirmNew" hidden>Yes, clear all shots</button>
@@ -374,6 +375,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
   function summaryText() {
     var h = (state.home || "").trim() || "Home", a = (state.away || "").trim();
     var lines = [h + (a ? " vs " + a : "") + ", shots on goal: " + state.shots.length];
+    lines.splice(0, 0, "Date: " + (state.date || today()));
     var pt = PERIODS.map(function (p, i) { return p + ": " + periodTotal(i); }).join("  ");
     lines.push("By period  " + pt);
     sortedRoster().forEach(function (pl) {
@@ -507,6 +509,8 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
 
   $("homeName").value = state.home || "";
   $("awayName").value = state.away || "";
+  $("gameDate").value = state.date || today();
+  $("gameDate").addEventListener("input", function () { state.date = $("gameDate").value; save(); renderSummary(); });
   $("awayCount").value = state.away || "";
   function saveNames(from) {
     state.home = $("homeName").value;
@@ -573,11 +577,12 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     } catch (e) { fallback(); }
   });
 
-  function fileStamp() {
+  function today() {
     var d = new Date();
     var p = function (n) { return (n < 10 ? "0" : "") + n; };
     return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
   }
+  function fileStamp() { return state.date || today(); }
   function fileName() {
     var h = (state.home || "Home").trim(), a = (state.away || "").trim();
     var base = (h + (a ? " vs " + a : "") + " shots " + fileStamp()).replace(/[^A-Za-z0-9 ._-]+/g, "").trim().replace(/\s+/g, "-");
@@ -585,7 +590,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
   }
   $("exportTxt").addEventListener("click", function () {
     var note = $("copyNotice");
-    var text = fileStamp() + "\n" + summaryText() + "\n";
+    var text = summaryText() + "\n";
     var name = fileName();
     function selectText() {
       var r = document.createRange(); r.selectNodeContents($("copyText"));
@@ -621,6 +626,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
   $("confirmNew").addEventListener("click", function () {
     state.shots = []; state.period = 0; state.away = "";
     $("awayName").value = ""; $("awayCount").value = "";
+    state.date = ""; $("gameDate").value = today();
     save(); resetNewGame(); render();
     $("countNotice").textContent = "New game started.";
     show("count");
