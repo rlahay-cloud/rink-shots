@@ -100,6 +100,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); ou
 .chip[aria-pressed="true"] small { color: var(--accent-ink); opacity: .85; }
 main { flex: 1; padding-block: 12px 96px; min-width: 0; }
 .banner { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-bottom: 12px; }
+.opp { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.opp label { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-size: 15px; }
+.opp input { flex: 1; min-width: 0; min-height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); padding: 0 12px; font: inherit; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
 .tile {
   position: relative; min-height: 118px; border-radius: 14px; border: 2px solid var(--line);
@@ -167,6 +170,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
         <div class="actions"><button class="btn primary" id="incomingYes">Use this roster</button><button class="btn" id="incomingNo">No thanks</button></div>
       </div>
       <div class="banner" id="exampleBanner" hidden>These jersey numbers are examples. Open Roster and replace them with your team.</div>
+      <div class="opp"><label for="awayCount">Opponent</label><input id="awayCount" maxlength="28" placeholder="Type the other team" autocomplete="off"></div>
       <div class="grid" id="grid"></div>
       <div class="actions">
         <button class="btn primary" id="teamShot">Team shot, no player</button>
@@ -241,13 +245,14 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
         <p class="muted">Copy the totals to type into the scoreboard, or to paste in a message.</p>
         <div class="actions" style="margin-top:0">
           <button class="btn primary" id="copy">Copy totals</button>
+          <button class="btn" id="exportTxt">Save as text file</button>
         </div>
         <div class="notice" id="copyNotice" aria-live="polite"></div>
         <pre id="copyText"></pre>
       </div>
       <div class="card">
         <h2>New game</h2>
-        <p class="muted">Clears this game's shots. Your roster stays.</p>
+        <p class="muted">Clears this game's shots and the opponent name. Your roster and team name stay.</p>
         <div class="actions" style="margin-top:0">
           <button class="btn danger" id="newGame">Start new game</button>
           <button class="btn danger" id="confirmNew" hidden>Yes, clear all shots</button>
@@ -474,7 +479,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     state.roster = sh.roster; state.example = false;
     state.home = sh.home; state.away = sh.away;
     save(); render();
-    $("homeName").value = state.home; $("awayName").value = state.away;
+    $("homeName").value = state.home; $("awayName").value = state.away; $("awayCount").value = state.away;
   }
   $("shareMake").addEventListener("click", function () {
     $("shareBox").value = encodeShare();
@@ -502,9 +507,16 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
 
   $("homeName").value = state.home || "";
   $("awayName").value = state.away || "";
-  function saveNames() { state.home = $("homeName").value; state.away = $("awayName").value; save(); renderTotals(); renderSummary(); }
-  $("homeName").addEventListener("input", saveNames);
-  $("awayName").addEventListener("input", saveNames);
+  $("awayCount").value = state.away || "";
+  function saveNames(from) {
+    state.home = $("homeName").value;
+    if (from === "count") { state.away = $("awayCount").value; $("awayName").value = state.away; }
+    else { state.away = $("awayName").value; $("awayCount").value = state.away; }
+    save(); renderTotals(); renderSummary();
+  }
+  $("homeName").addEventListener("input", function () { saveNames("roster"); });
+  $("awayName").addEventListener("input", function () { saveNames("roster"); });
+  $("awayCount").addEventListener("input", function () { saveNames("count"); });
 
   $("bulkAdd").addEventListener("click", function () {
     var note = $("bulkNotice");
@@ -561,13 +573,55 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     } catch (e) { fallback(); }
   });
 
+  function fileStamp() {
+    var d = new Date();
+    var p = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+  }
+  function fileName() {
+    var h = (state.home || "Home").trim(), a = (state.away || "").trim();
+    var base = (h + (a ? " vs " + a : "") + " shots " + fileStamp()).replace(/[^A-Za-z0-9 ._-]+/g, "").trim().replace(/\s+/g, "-");
+    return base + ".txt";
+  }
+  $("exportTxt").addEventListener("click", function () {
+    var note = $("copyNotice");
+    var text = fileStamp() + "\n" + summaryText() + "\n";
+    var name = fileName();
+    function selectText() {
+      var r = document.createRange(); r.selectNodeContents($("copyText"));
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      note.textContent = "Saving a file did not work here. The text is selected, so press and hold to copy it.";
+    }
+    function download() {
+      try {
+        var blob = new Blob([text], {type: "text/plain"});
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+        note.textContent = "Saved " + name + ". Look in your Downloads or Files.";
+      } catch (e) { selectText(); }
+    }
+    try {
+      var file = new File([text], name, {type: "text/plain"});
+      if (navigator.canShare && navigator.canShare({files: [file]})) {
+        navigator.share({files: [file], title: name}).then(function () { note.textContent = "Shared " + name + "."; },
+          function (err) { if (err && err.name === "AbortError") note.textContent = "Cancelled."; else download(); });
+        return;
+      }
+    } catch (e) {}
+    download();
+  });
+
   $("newGame").addEventListener("click", function () {
     $("newGame").hidden = true; $("confirmNew").hidden = false; $("cancelNew").hidden = false;
   });
   function resetNewGame() { $("newGame").hidden = false; $("confirmNew").hidden = true; $("cancelNew").hidden = true; }
   $("cancelNew").addEventListener("click", resetNewGame);
   $("confirmNew").addEventListener("click", function () {
-    state.shots = []; state.period = 0; save(); resetNewGame(); render();
+    state.shots = []; state.period = 0; state.away = "";
+    $("awayName").value = ""; $("awayCount").value = "";
+    save(); resetNewGame(); render();
     $("countNotice").textContent = "New game started.";
     show("count");
   });
@@ -632,6 +686,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     state.builtIn = v;
     save(); render();
     $("homeName").value = state.home || "";
+    $("awayCount").value = state.away || "";
   }
   try {
     fetch("roster.json", {cache: "no-cache"}).then(function (r) { return r.ok ? r.json() : null; }).then(applyBuiltIn).catch(function () {});
