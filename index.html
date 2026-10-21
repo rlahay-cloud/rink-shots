@@ -603,6 +603,21 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     $("newNum").focus();
   });
 
+  // Plain-text copy through a temporary text box. Keeps line breaks and spaces exactly as they are.
+  function plainCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;font-size:16px";
+    document.body.appendChild(ta);
+    var ok = false;
+    try {
+      ta.focus(); ta.select(); ta.setSelectionRange(0, text.length);
+      ok = document.execCommand("copy");
+    } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+
   $("copy").addEventListener("click", function () {
     var text = summaryText();
     var note = $("copyNotice");
@@ -611,6 +626,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
       var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
       note.textContent = "Copy did not work here. The text is selected, so press and hold to copy it.";
     }
+    if (plainCopy(text)) { note.textContent = "Copied."; return; }
     try {
       navigator.clipboard.writeText(text).then(function () { note.textContent = "Copied."; }, fallback);
     } catch (e) { fallback(); }
