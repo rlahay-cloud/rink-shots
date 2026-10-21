@@ -268,10 +268,12 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
         <p class="muted">Copy the totals to type into the scoreboard, or to paste in a message.</p>
         <div class="actions" style="margin-top:0">
           <button class="btn primary" id="copy">Copy totals</button>
+          <button class="btn" id="shareText">Share text</button>
           <button class="btn" id="exportTxt">Save as text file</button>
         </div>
         <div class="notice" id="copyNotice" aria-live="polite"></div>
         <pre id="copyText"></pre>
+        <p class="muted" style="margin-top:8px">App version 9</p>
       </div>
       <div class="card">
         <h2>New game</h2>
@@ -643,6 +645,12 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     var base = (h + (a ? " vs " + a : "") + " shots " + fileStamp()).replace(/[^A-Za-z0-9 ._-]+/g, "").trim().replace(/\s+/g, "-");
     return base + ".txt";
   }
+  $("shareText").addEventListener("click", function () {
+    var note = $("copyNotice");
+    if (!navigator.share) { note.textContent = "Sharing is not available here. Use Save as text file."; return; }
+    navigator.share({text: summaryText()}).then(function () { note.textContent = "Shared."; },
+      function (err) { note.textContent = err && err.name === "AbortError" ? "Cancelled." : "Sharing did not work. Use Save as text file."; });
+  });
   $("exportTxt").addEventListener("click", function () {
     var note = $("copyNotice");
     var text = summaryText() + "\n";
