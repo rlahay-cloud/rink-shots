@@ -1,5 +1,5 @@
-const CACHE = "rink-shots-v3";
-const CORE = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png"];
+const CACHE = "rink-shots-v4";
+const CORE = ["./", "index.html", "manifest.webmanifest", "roster.json", "icon-180.png", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
 });
@@ -16,6 +16,17 @@ self.addEventListener("fetch", (e) => {
         caches.open(CACHE).then((c) => c.put("index.html", copy));
         return res;
       }).catch(() => caches.match("index.html").then((hit) => hit || caches.match("./")))
+    );
+    return;
+  }
+  if (e.request.url.indexOf("roster.json") !== -1) {
+    // Roster: newest copy when online, saved copy when not.
+    e.respondWith(
+      fetch(e.request).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        return res;
+      }).catch(() => caches.match(e.request))
     );
     return;
   }

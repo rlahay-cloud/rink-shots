@@ -619,6 +619,24 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
   try { if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js"); } catch (e) {}
 
+  // Team roster built into the page. When roster.json has a newer version
+  // than this device has used, the roster and team name are replaced by it.
+  // Shots and the opponent name are never touched.
+  function applyBuiltIn(data) {
+    if (!data || !Array.isArray(data.roster) || !data.roster.length) return;
+    var v = Number(data.version) || 0;
+    if (v <= (Number(state.builtIn) || 0)) return;
+    state.roster = data.roster.map(function (p) { return {n: Number(p.n), name: String(p.name || "")}; });
+    state.example = false;
+    if (data.home) state.home = data.home;
+    state.builtIn = v;
+    save(); render();
+    $("homeName").value = state.home || "";
+  }
+  try {
+    fetch("roster.json", {cache: "no-cache"}).then(function (r) { return r.ok ? r.json() : null; }).then(applyBuiltIn).catch(function () {});
+  } catch (e) {}
+
   render();
 })();
 </script>
