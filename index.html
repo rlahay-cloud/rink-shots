@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rink Shots">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Rink Shots</title>
+<style>
+html,body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+/* Layout: sticky score strip on top, one-thumb tile grid under it, bottom tab bar. Dark-first, purple and silver to match the Streamn buttons. */
+:root {
+  --bg: #0b0b10;
+  --panel: #15151d;
+  --panel-2: #1d1d28;
+  --line: #2c2c3a;
+  --fg: #f2f2f7;
+  --muted: #9a9cab;
+  --accent: #8a42ff;
+  --accent-ink: #ffffff;
+  --accent-soft: #2a1a4d;
+  --silver: #c4c8d2;
+  --danger: #ff6b7a;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+  --font-body: "Barlow", -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f4f8;
+    --panel: #ffffff;
+    --panel-2: #ececf3;
+    --line: #d4d4e0;
+    --fg: #14141c;
+    --muted: #5f6171;
+    --accent: #6d28d9;
+    --accent-ink: #ffffff;
+    --accent-soft: #e6dcfb;
+    --silver: #5f6171;
+    --danger: #c0283d;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f4f4f8;
+  --panel: #ffffff;
+  --panel-2: #ececf3;
+  --line: #d4d4e0;
+  --fg: #14141c;
+  --muted: #5f6171;
+  --accent: #6d28d9;
+  --accent-ink: #ffffff;
+  --accent-soft: #e6dcfb;
+  --silver: #5f6171;
+  --danger: #c0283d;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.app { max-width: 720px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+.strip {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); padding-block: 10px 8px; border-bottom: 1px solid var(--line);
+  display: grid; gap: 8px;
+}
+.strip-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { font-family: var(--font-display); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 15px; color: var(--silver); }
+.total { display: flex; align-items: baseline; gap: 8px; }
+.total b { font-family: var(--font-display); font-size: 56px; line-height: .9; font-variant-numeric: tabular-nums; color: var(--fg); }
+.total span { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-size: 15px; }
+.periods { display: flex; gap: 6px; }
+.chip {
+  flex: 1; min-height: 44px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--panel); font-family: var(--font-display); font-weight: 600; font-size: 18px; letter-spacing: .06em;
+  display: grid; place-items: center; line-height: 1.05;
+}
+.chip small { font-family: var(--font-body); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip[aria-pressed="true"] small { color: var(--accent-ink); opacity: .85; }
+main { flex: 1; padding-block: 12px 96px; min-width: 0; }
+.banner { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-bottom: 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.tile {
+  position: relative; min-height: 118px; border-radius: 14px; border: 2px solid var(--line);
+  background: var(--panel); padding: 8px 8px 10px; text-align: left; display: grid; grid-template-rows: auto 1fr auto; user-select: none; -webkit-user-select: none;
+}
+.tile:active { background: var(--accent-soft); border-color: var(--accent); }
+.tile .num { font-family: var(--font-display); font-weight: 700; font-size: 34px; line-height: 1; color: var(--silver); }
+.tile .nm { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tile .cnt { font-family: var(--font-display); font-weight: 700; font-size: 44px; line-height: 1; font-variant-numeric: tabular-nums; align-self: end; }
+.tile .minus {
+  position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--panel-2); font-size: 24px; line-height: 1; display: grid; place-items: center; color: var(--muted);
+}
+.tile.hot { animation: pulse .25s ease-out; }
+@keyframes pulse { from { border-color: var(--accent); background: var(--accent-soft); } to { border-color: var(--line); background: var(--panel); } }
+@media (prefers-reduced-motion: reduce) { .tile.hot { animation: none; } }
+.actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.btn { min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-weight: 600; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--danger); border-color: var(--danger); background: transparent; }
+.btn[disabled] { opacity: .4; cursor: default; }
+h2 { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; font-size: 22px; margin: 0 0 10px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.form-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.form-row input { min-height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); padding: 0 12px; font: inherit; min-width: 0; }
+.form-row #newNum { width: 96px; }
+.form-row #newName { flex: 1; min-width: 140px; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.list li { display: flex; align-items: center; gap: 10px; background: var(--panel-2); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.list .n { font-family: var(--font-display); font-weight: 700; font-size: 24px; width: 52px; color: var(--silver); }
+.list .w { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.list .x { min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--danger); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 6px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-size: 14px; }
+td.t, th.t { color: var(--fg); font-weight: 700; }
+pre { background: var(--panel-2); border-radius: 10px; padding: 10px; overflow-x: auto; font-size: 13px; margin: 10px 0 0; }
+.muted { color: var(--muted); font-size: 14px; }
+.notice { min-height: 22px; color: var(--muted); font-size: 14px; margin-top: 8px; }
+nav.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--bg); border-top: 1px solid var(--line);
+  padding: 8px max(16px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+nav.tabs .in { max-width: 720px; margin: 0 auto; display: flex; gap: 8px; }
+nav.tabs button { flex: 1; min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-family: var(--font-display); font-weight: 600; font-size: 18px; letter-spacing: .08em; text-transform: uppercase; }
+nav.tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Condensed:wght@600;700&display=swap">
+
+<div class="app">
+  <header class="strip">
+    <div class="strip-top">
+      <div class="brand">Home shots on goal</div>
+      <div class="total"><b id="total">0</b><span>shots</span></div>
+    </div>
+    <div class="periods" id="periods" role="group" aria-label="Period"></div>
+  </header>
+
+  <main>
+    <section id="view-count">
+      <div class="banner" id="exampleBanner" hidden>These jersey numbers are examples. Open Roster and replace them with your team.</div>
+      <div class="grid" id="grid"></div>
+      <div class="actions">
+        <button class="btn primary" id="teamShot">Team shot, no player</button>
+        <button class="btn" id="undo">Undo last</button>
+      </div>
+      <div class="notice" id="countNotice" aria-live="polite"></div>
+    </section>
+
+    <section id="view-roster" hidden>
+      <div class="card">
+        <h2>Add a player</h2>
+        <form class="form-row" id="addForm">
+          <input id="newNum" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="Jersey #" aria-label="Jersey number">
+          <input id="newName" maxlength="24" placeholder="Name (optional)" aria-label="Player name">
+          <button class="btn primary" type="submit">Add</button>
+        </form>
+        <div class="notice" id="rosterNotice" aria-live="polite"></div>
+      </div>
+      <div class="card">
+        <h2>Roster</h2>
+        <ul class="list" id="rosterList"></ul>
+      </div>
+      <div class="card">
+        <h2>Backup</h2>
+        <p class="muted">Your roster and this game's shots save on this device by themselves and survive closing the app or restarting the phone. A backup code lets you restore them if the device is ever cleared, or move them to another device.</p>
+        <div class="actions" style="margin-top:0">
+          <button class="btn primary" id="backupMake">Show backup code</button>
+        </div>
+        <textarea id="backupBox" rows="4" style="width:100%;margin-top:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);padding:10px;font:inherit;font-size:13px" placeholder="Backup code appears here. To restore, paste a code here and tap Restore." aria-label="Backup code"></textarea>
+        <div class="actions">
+          <button class="btn" id="backupCopy">Copy code</button>
+          <button class="btn danger" id="backupRestore">Restore from code</button>
+        </div>
+        <div class="notice" id="backupNotice" aria-live="polite"></div>
+      </div>
+      <p class="muted">The roster is saved on this device and stays when you start a new game.</p>
+    </section>
+
+    <section id="view-summary" hidden>
+      <div class="card">
+        <h2>This game</h2>
+        <div class="table-wrap"><table id="sumTable"></table></div>
+      </div>
+      <div class="card">
+        <h2>Copy totals</h2>
+        <p class="muted">Copy the totals to type into the scoreboard, or to paste in a message.</p>
+        <div class="actions" style="margin-top:0">
+          <button class="btn primary" id="copy">Copy totals</button>
+        </div>
+        <div class="notice" id="copyNotice" aria-live="polite"></div>
+        <pre id="copyText"></pre>
+      </div>
+      <div class="card">
+        <h2>New game</h2>
+        <p class="muted">Clears this game's shots. Your roster stays.</p>
+        <div class="actions" style="margin-top:0">
+          <button class="btn danger" id="newGame">Start new game</button>
+          <button class="btn danger" id="confirmNew" hidden>Yes, clear all shots</button>
+          <button class="btn" id="cancelNew" hidden>Cancel</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabs"><div class="in" role="tablist">
+    <button role="tab" id="tab-count" aria-selected="true">Count</button>
+    <button role="tab" id="tab-summary" aria-selected="false">Totals</button>
+    <button role="tab" id="tab-roster" aria-selected="false">Roster</button>
+  </div></nav>
+</div>
+
+<script>
+(function () {
+  var KEY = "rink-shots-v1";
+  var PERIODS = ["1", "2", "3", "OT"];
+  var EXAMPLE = [{n: 4}, {n: 7}, {n: 9}, {n: 10}, {n: 12}, {n: 17}, {n: 19}, {n: 23}];
+  var state = load();
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (s && Array.isArray(s.roster) && Array.isArray(s.shots)) return s;
+      }
+    } catch (e) {}
+    return {roster: EXAMPLE.slice(), example: true, period: 0, shots: []};
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  var $ = function (id) { return document.getElementById(id); };
+  var gridEl = $("grid"), totalEl = $("total"), periodsEl = $("periods");
+
+  function countFor(n, p) {
+    var c = 0;
+    for (var i = 0; i < state.shots.length; i++) {
+      var s = state.shots[i];
+      if (s.n === n && (p === undefined || s.p === p)) c++;
+    }
+    return c;
+  }
+  function periodTotal(p) {
+    var c = 0;
+    for (var i = 0; i < state.shots.length; i++) if (state.shots[i].p === p) c++;
+    return c;
+  }
+  function sortedRoster() {
+    return state.roster.slice().sort(function (a, b) { return a.n - b.n; });
+  }
+
+  function renderPeriods() {
+    periodsEl.innerHTML = "";
+    PERIODS.forEach(function (label, i) {
+      var b = document.createElement("button");
+      b.className = "chip";
+      b.setAttribute("aria-pressed", String(state.period === i));
+      b.innerHTML = label + "<small>" + periodTotal(i) + "</small>";
+      b.addEventListener("click", function () { state.period = i; save(); render(); });
+      periodsEl.appendChild(b);
+    });
+  }
+
+  function renderGrid() {
+    gridEl.innerHTML = "";
+    sortedRoster().forEach(function (pl) {
+      var t = document.createElement("div");
+      t.className = "tile";
+      t.setAttribute("role", "button");
+      t.tabIndex = 0;
+      t.setAttribute("aria-label", "Shot for number " + pl.n);
+      var num = document.createElement("div"); num.className = "num"; num.textContent = "#" + pl.n;
+      var nm = document.createElement("div"); nm.className = "nm"; nm.textContent = pl.name || "";
+      var cnt = document.createElement("div"); cnt.className = "cnt"; cnt.textContent = countFor(pl.n);
+      var minus = document.createElement("button");
+      minus.className = "minus"; minus.textContent = "−";
+      minus.setAttribute("aria-label", "Remove a shot from number " + pl.n);
+      minus.addEventListener("click", function (e) { e.stopPropagation(); removeShot(pl.n); });
+      var mid = document.createElement("div"); mid.appendChild(nm);
+      t.appendChild(num); t.appendChild(mid); t.appendChild(cnt); t.appendChild(minus);
+      t.addEventListener("click", function () { addShot(pl.n, t); });
+      t.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); addShot(pl.n, t); }
+      });
+      gridEl.appendChild(t);
+    });
+    $("exampleBanner").hidden = !state.example;
+  }
+
+  function renderTotals() {
+    totalEl.textContent = state.shots.length;
+  }
+
+  function renderSummary() {
+    var head = "<tr><th>#</th>" + PERIODS.map(function (p) { return "<th>" + p + "</th>"; }).join("") + "<th class='t'>Total</th></tr>";
+    var rows = sortedRoster().map(function (pl) {
+      var cells = PERIODS.map(function (_, i) { return "<td>" + countFor(pl.n, i) + "</td>"; }).join("");
+      return "<tr><td>#" + pl.n + (pl.name ? " " + esc(pl.name) : "") + "</td>" + cells + "<td class='t'>" + countFor(pl.n) + "</td></tr>";
+    }).join("");
+    var team = 0;
+    for (var i = 0; i < state.shots.length; i++) if (state.shots[i].n === null) team++;
+    var unTotals = PERIODS.map(function (_, p) {
+      var c = 0;
+      for (var i = 0; i < state.shots.length; i++) if (state.shots[i].n === null && state.shots[i].p === p) c++;
+      return "<td>" + c + "</td>";
+    }).join("");
+    var teamRow = team ? "<tr><td>No player</td>" + unTotals + "<td class='t'>" + team + "</td></tr>" : "";
+    var allRow = "<tr><td class='t'>All shots</td>" + PERIODS.map(function (_, p) { return "<td class='t'>" + periodTotal(p) + "</td>"; }).join("") + "<td class='t'>" + state.shots.length + "</td></tr>";
+    $("sumTable").innerHTML = head + rows + teamRow + allRow;
+    $("copyText").textContent = summaryText();
+  }
+
+  function summaryText() {
+    var lines = ["Home shots on goal: " + state.shots.length];
+    var pt = PERIODS.map(function (p, i) { return p + ": " + periodTotal(i); }).join("  ");
+    lines.push("By period  " + pt);
+    sortedRoster().forEach(function (pl) {
+      var c = countFor(pl.n);
+      if (c > 0) lines.push("#" + pl.n + (pl.name ? " " + pl.name : "") + "  " + c);
+    });
+    var team = 0;
+    for (var i = 0; i < state.shots.length; i++) if (state.shots[i].n === null) team++;
+    if (team) lines.push("No player  " + team);
+    return lines.join("\n");
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) { return {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]; });
+  }
+
+  function renderRoster() {
+    var ul = $("rosterList");
+    ul.innerHTML = "";
+    var list = sortedRoster();
+    if (!list.length) {
+      var li = document.createElement("li");
+      li.innerHTML = "<span class='w'>No players yet. Add a jersey number above.</span>";
+      ul.appendChild(li);
+    }
+    list.forEach(function (pl) {
+      var li = document.createElement("li");
+      var n = document.createElement("span"); n.className = "n"; n.textContent = "#" + pl.n;
+      var w = document.createElement("span"); w.className = "w"; w.textContent = pl.name || "";
+      var x = document.createElement("button"); x.className = "x"; x.textContent = "Remove";
+      x.setAttribute("aria-label", "Remove number " + pl.n + " from the roster");
+      x.addEventListener("click", function () {
+        state.roster = state.roster.filter(function (r) { return r.n !== pl.n; });
+        state.example = false; save(); render();
+        $("rosterNotice").textContent = "Removed #" + pl.n + ". Their shots stay in this game's total.";
+      });
+      li.appendChild(n); li.appendChild(w); li.appendChild(x);
+      ul.appendChild(li);
+    });
+  }
+
+  function render() {
+    renderPeriods(); renderGrid(); renderTotals(); renderSummary(); renderRoster();
+  }
+
+  function addShot(n, tile) {
+    state.shots.push({n: n, p: state.period});
+    save(); render();
+    flash(n);
+    $("countNotice").textContent = n === null ? "Team shot added." : "Shot added for #" + n + ".";
+  }
+  function flash(n) {
+    if (n === null) return;
+    var tiles = gridEl.children;
+    var list = sortedRoster();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].n === n && tiles[i]) { tiles[i].classList.add("hot"); }
+    }
+  }
+  function removeShot(n) {
+    for (var i = state.shots.length - 1; i >= 0; i--) {
+      if (state.shots[i].n === n) { state.shots.splice(i, 1); save(); render(); $("countNotice").textContent = "Took a shot off #" + n + "."; return; }
+    }
+    $("countNotice").textContent = "#" + n + " has no shots to remove.";
+  }
+
+  $("teamShot").addEventListener("click", function () { addShot(null); });
+  $("undo").addEventListener("click", function () {
+    var s = state.shots.pop();
+    if (!s) { $("countNotice").textContent = "Nothing to undo."; return; }
+    save(); render();
+    $("countNotice").textContent = s.n === null ? "Undid the last team shot." : "Undid the last shot, #" + s.n + ".";
+  });
+
+  $("addForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var raw = $("newNum").value.trim();
+    var n = parseInt(raw, 10);
+    var note = $("rosterNotice");
+    if (!/^\d{1,3}$/.test(raw) || isNaN(n)) { note.textContent = "Enter a jersey number from 0 to 999."; return; }
+    if (state.roster.some(function (r) { return r.n === n; })) { note.textContent = "#" + n + " is already on the roster."; return; }
+    if (state.example) { state.roster = []; state.example = false; }
+    state.roster.push({n: n, name: $("newName").value.trim()});
+    save(); render();
+    $("newNum").value = ""; $("newName").value = "";
+    note.textContent = "Added #" + n + ".";
+    $("newNum").focus();
+  });
+
+  $("copy").addEventListener("click", function () {
+    var text = summaryText();
+    var note = $("copyNotice");
+    function fallback() {
+      var r = document.createRange(); r.selectNodeContents($("copyText"));
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      note.textContent = "Copy did not work here. The text is selected, so press and hold to copy it.";
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () { note.textContent = "Copied."; }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  $("newGame").addEventListener("click", function () {
+    $("newGame").hidden = true; $("confirmNew").hidden = false; $("cancelNew").hidden = false;
+  });
+  function resetNewGame() { $("newGame").hidden = false; $("confirmNew").hidden = true; $("cancelNew").hidden = true; }
+  $("cancelNew").addEventListener("click", resetNewGame);
+  $("confirmNew").addEventListener("click", function () {
+    state.shots = []; state.period = 0; save(); resetNewGame(); render();
+    $("countNotice").textContent = "New game started.";
+    show("count");
+  });
+
+  var views = ["count", "summary", "roster"];
+  function show(name) {
+    views.forEach(function (v) {
+      $("view-" + v).hidden = v !== name;
+      $("tab-" + v).setAttribute("aria-selected", String(v === name));
+    });
+    window.scrollTo(0, 0);
+  }
+  views.forEach(function (v) { $("tab-" + v).addEventListener("click", function () { show(v); }); });
+
+  // Keep the screen awake while counting. Ignored if the browser refuses.
+  var lock = null;
+  function wake() {
+    try {
+      if (navigator.wakeLock && document.visibilityState === "visible") {
+        navigator.wakeLock.request("screen").then(function (l) { lock = l; }, function () {});
+      }
+    } catch (e) {}
+  }
+  document.addEventListener("visibilitychange", wake);
+  document.addEventListener("click", function once() { wake(); document.removeEventListener("click", once); });
+
+  // Backup and restore
+  $("backupMake").addEventListener("click", function () {
+    $("backupBox").value = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+    $("backupNotice").textContent = "Backup code ready. Copy it and keep it somewhere safe, such as a note.";
+  });
+  $("backupCopy").addEventListener("click", function () {
+    var box = $("backupBox");
+    if (!box.value) { $("backupNotice").textContent = "Tap Show backup code first."; return; }
+    function fb() { box.focus(); box.select(); $("backupNotice").textContent = "The code is selected. Press and hold to copy it."; }
+    try { navigator.clipboard.writeText(box.value).then(function () { $("backupNotice").textContent = "Copied."; }, fb); } catch (e) { fb(); }
+  });
+  $("backupRestore").addEventListener("click", function () {
+    var note = $("backupNotice");
+    try {
+      var s = JSON.parse(decodeURIComponent(escape(atob($("backupBox").value.trim()))));
+      if (!s || !Array.isArray(s.roster) || !Array.isArray(s.shots)) throw new Error("bad");
+      state = s; save(); render();
+      note.textContent = "Restored " + state.roster.length + " players and " + state.shots.length + " shots.";
+    } catch (e) { note.textContent = "That code did not work. Paste the whole backup code and try again."; }
+  });
+
+  // Ask the browser to keep this data, and work offline.
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  try { if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js"); } catch (e) {}
+
+  render();
+})();
+</script>
+</body>
+</html>
