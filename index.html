@@ -154,7 +154,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
 <div class="app">
   <header class="strip">
     <div class="strip-top">
-      <div class="brand">Home shots on goal</div>
+      <div class="brand" id="brand">Home shots on goal</div>
       <div class="total"><b id="total">0</b><span>shots</span></div>
     </div>
     <div class="periods" id="periods" role="group" aria-label="Period"></div>
@@ -173,7 +173,22 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
 
     <section id="view-roster" hidden>
       <div class="card">
-        <h2>Add a player</h2>
+        <h2>Team names</h2>
+        <div class="form-row">
+          <input id="homeName" maxlength="28" placeholder="Your team" aria-label="Your team name" style="flex:1;min-width:140px">
+          <input id="awayName" maxlength="28" placeholder="Opponent" aria-label="Opponent name" style="flex:1;min-width:140px">
+        </div>
+        <div class="notice" id="teamNotice" aria-live="polite">Saved as you type.</div>
+      </div>
+      <div class="card">
+        <h2>Add many players</h2>
+        <p class="muted">Type or paste the whole roster. Put each player on a new line, or separate with commas. Add a name after the number if you like.</p>
+        <textarea id="bulk" rows="5" style="width:100%;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);padding:10px;font:inherit" placeholder="4 Smith&#10;7 Jones&#10;10&#10;or just: 4, 7, 9, 10, 12" aria-label="Roster list"></textarea>
+        <div class="actions"><button class="btn primary" id="bulkAdd">Add these players</button></div>
+        <div class="notice" id="bulkNotice" aria-live="polite"></div>
+      </div>
+      <div class="card">
+        <h2>Add one player</h2>
         <form class="form-row" id="addForm">
           <input id="newNum" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="Jersey #" aria-label="Jersey number">
           <input id="newName" maxlength="24" placeholder="Name (optional)" aria-label="Player name">
@@ -249,7 +264,7 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
         if (s && Array.isArray(s.roster) && Array.isArray(s.shots)) return s;
       }
     } catch (e) {}
-    return {roster: EXAMPLE.slice(), example: true, period: 0, shots: []};
+    return {roster: EXAMPLE.slice(), example: true, period: 0, shots: [], home: "", away: ""};
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
 
@@ -313,6 +328,8 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
 
   function renderTotals() {
     totalEl.textContent = state.shots.length;
+    var h = (state.home || "").trim(), a = (state.away || "").trim();
+    $("brand").textContent = h && a ? h + " vs " + a : h ? h + " shots on goal" : a ? "vs " + a : "Home shots on goal";
   }
 
   function renderSummary() {
@@ -335,7 +352,8 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
   }
 
   function summaryText() {
-    var lines = ["Home shots on goal: " + state.shots.length];
+    var h = (state.home || "").trim() || "Home", a = (state.away || "").trim();
+    var lines = [h + (a ? " vs " + a : "") + ", shots on goal: " + state.shots.length];
     var pt = PERIODS.map(function (p, i) { return p + ": " + periodTotal(i); }).join("  ");
     lines.push("By period  " + pt);
     sortedRoster().forEach(function (pl) {
@@ -408,6 +426,39 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     if (!s) { $("countNotice").textContent = "Nothing to undo."; return; }
     save(); render();
     $("countNotice").textContent = s.n === null ? "Undid the last team shot." : "Undid the last shot, #" + s.n + ".";
+  });
+
+  $("homeName").value = state.home || "";
+  $("awayName").value = state.away || "";
+  function saveNames() { state.home = $("homeName").value; state.away = $("awayName").value; save(); renderTotals(); renderSummary(); }
+  $("homeName").addEventListener("input", saveNames);
+  $("awayName").addEventListener("input", saveNames);
+
+  $("bulkAdd").addEventListener("click", function () {
+    var note = $("bulkNotice");
+    var text = $("bulk").value;
+    var parts = [];
+    text.split(/[\n,;]+/).forEach(function (line) {
+      line = line.trim();
+      if (!line) return;
+      if (/^\d{1,3}(\s+\d{1,3})+$/.test(line)) { line.split(/\s+/).forEach(function (n) { parts.push(n); }); }
+      else parts.push(line);
+    });
+    var added = 0, renamed = 0, bad = [];
+    var fresh = state.example;
+    parts.forEach(function (p) {
+      var m = /^#?(\d{1,3})\s*[-:.]?\s*(.*)$/.exec(p);
+      if (!m) { bad.push(p); return; }
+      var n = parseInt(m[1], 10), name = m[2].trim().slice(0, 24);
+      if (fresh && added === 0) { state.roster = []; state.example = false; }
+      var ex = state.roster.filter(function (r) { return r.n === n; })[0];
+      if (ex) { if (name && ex.name !== name) { ex.name = name; renamed++; } }
+      else { state.roster.push({n: n, name: name}); added++; }
+    });
+    save(); render();
+    if (!added && !renamed) { note.textContent = bad.length ? "I could not read: " + bad.join(", ") + ". Start each line with the jersey number." : "Nothing new to add."; return; }
+    $("bulk").value = "";
+    note.textContent = "Added " + added + (renamed ? ", updated " + renamed + " names" : "") + (bad.length ? ". Could not read: " + bad.join(", ") : ".");
   });
 
   $("addForm").addEventListener("submit", function (e) {
