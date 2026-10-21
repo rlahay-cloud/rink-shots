@@ -1,21 +1,66 @@
 {
-  "version": 1,
-  "home": "",
-  "roster": [
-    {"n": 4, "name": "Caleb A."},
-    {"n": 10, "name": "Van C."},
-    {"n": 11, "name": "Louis D."},
-    {"n": 13, "name": "Connor C."},
-    {"n": 14, "name": "Lincoln D."},
-    {"n": 17, "name": "Camden H."},
-    {"n": 18, "name": "Grant J."},
-    {"n": 19, "name": "Wesley J."},
-    {"n": 38, "name": "Zachary C."},
-    {"n": 72, "name": "Lucas D."},
-    {"n": 86, "name": "Wyatt S."},
-    {"n": 88, "name": "Colton N."},
-    {"n": 91, "name": "Owen S."},
-    {"n": 93, "name": "Monty M."},
-    {"n": 97, "name": "Everett L."}
-  ]
+ "version": 2,
+ "home": "Rideau St. Lawrence Kings",
+ "roster": [
+  {
+   "n": 4,
+   "name": "Caleb Aubin"
+  },
+  {
+   "n": 10,
+   "name": "Van Clemo"
+  },
+  {
+   "n": 11,
+   "name": "Louis Drury"
+  },
+  {
+   "n": 13,
+   "name": "Connor Chambers"
+  },
+  {
+   "n": 14,
+   "name": "Lincoln Dawson"
+  },
+  {
+   "n": 17,
+   "name": "Camden Hudson"
+  },
+  {
+   "n": 18,
+   "name": "Grant Jordan"
+  },
+  {
+   "n": 19,
+   "name": "Wesley Johnston"
+  },
+  {
+   "n": 38,
+   "name": "Zachary Chambers"
+  },
+  {
+   "n": 72,
+   "name": "Lucas Dillabough"
+  },
+  {
+   "n": 86,
+   "name": "Wyatt Stephenson"
+  },
+  {
+   "n": 88,
+   "name": "Colton Nizman"
+  },
+  {
+   "n": 91,
+   "name": "Owen Smith"
+  },
+  {
+   "n": 93,
+   "name": "Monty Marriner"
+  },
+  {
+   "n": 97,
+   "name": "Everett Lalonde"
+  }
+ ]
 }
