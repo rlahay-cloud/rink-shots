@@ -162,6 +162,10 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
 
   <main>
     <section id="view-count">
+      <div class="banner" id="incoming" hidden>
+        <div id="incomingText"></div>
+        <div class="actions"><button class="btn primary" id="incomingYes">Use this roster</button><button class="btn" id="incomingNo">No thanks</button></div>
+      </div>
       <div class="banner" id="exampleBanner" hidden>These jersey numbers are examples. Open Roster and replace them with your team.</div>
       <div class="grid" id="grid"></div>
       <div class="actions">
@@ -179,6 +183,17 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
           <input id="awayName" maxlength="28" placeholder="Opponent" aria-label="Opponent name" style="flex:1;min-width:140px">
         </div>
         <div class="notice" id="teamNotice" aria-live="polite">Saved as you type.</div>
+      </div>
+      <div class="card">
+        <h2>Share this roster</h2>
+        <p class="muted">Make one link that carries your roster and team names. Anyone who opens it can load the same roster on their own device. Shots are not shared.</p>
+        <div class="actions" style="margin-top:0">
+          <button class="btn primary" id="shareMake">Make share link</button>
+          <button class="btn" id="shareCopy">Copy link</button>
+        </div>
+        <textarea id="shareBox" rows="3" style="width:100%;margin-top:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);padding:10px;font:inherit;font-size:13px" placeholder="The link appears here. To load a roster from someone else, paste their link here and tap Load." aria-label="Share link"></textarea>
+        <div class="actions"><button class="btn danger" id="shareLoad">Load roster from link</button></div>
+        <div class="notice" id="shareNotice" aria-live="polite"></div>
       </div>
       <div class="card">
         <h2>Add many players</h2>
@@ -427,6 +442,63 @@ nav.tabs button[aria-selected="true"] { background: var(--accent); border-color:
     save(); render();
     $("countNotice").textContent = s.n === null ? "Undid the last team shot." : "Undid the last shot, #" + s.n + ".";
   });
+
+  // Share links carry the roster and team names in the part after the #.
+  function encodeShare() {
+    var r = sortedRoster().map(function (p) { return p.n + (p.name ? " " + p.name : ""); }).join("\n");
+    var q = new URLSearchParams();
+    q.set("roster", r);
+    if ((state.home || "").trim()) q.set("home", state.home.trim());
+    if ((state.away || "").trim()) q.set("away", state.away.trim());
+    return location.origin + location.pathname + "#" + q.toString();
+  }
+  function decodeShare(link) {
+    var i = link.indexOf("#");
+    if (i < 0) return null;
+    var q = new URLSearchParams(link.slice(i + 1));
+    var r = q.get("roster");
+    if (r === null) return null;
+    var roster = [], seen = {};
+    r.split(/\n/).forEach(function (line) {
+      var m = /^\s*(\d{1,3})\s*(.*)$/.exec(line);
+      if (!m) return;
+      var n = parseInt(m[1], 10);
+      if (seen[n]) return;
+      seen[n] = true;
+      roster.push({n: n, name: m[2].trim().slice(0, 24)});
+    });
+    if (!roster.length) return null;
+    return {roster: roster, home: (q.get("home") || "").slice(0, 28), away: (q.get("away") || "").slice(0, 28)};
+  }
+  function applyShared(sh) {
+    state.roster = sh.roster; state.example = false;
+    state.home = sh.home; state.away = sh.away;
+    save(); render();
+    $("homeName").value = state.home; $("awayName").value = state.away;
+  }
+  $("shareMake").addEventListener("click", function () {
+    $("shareBox").value = encodeShare();
+    $("shareNotice").textContent = "Link ready. Copy it and send it in a message.";
+  });
+  $("shareCopy").addEventListener("click", function () {
+    var box = $("shareBox");
+    if (!box.value) box.value = encodeShare();
+    function fb() { box.focus(); box.select(); $("shareNotice").textContent = "The link is selected. Press and hold to copy it."; }
+    try { navigator.clipboard.writeText(box.value).then(function () { $("shareNotice").textContent = "Copied. Send it in a message."; }, fb); } catch (e) { fb(); }
+  });
+  $("shareLoad").addEventListener("click", function () {
+    var sh = decodeShare($("shareBox").value.trim());
+    if (!sh) { $("shareNotice").textContent = "That is not a roster link. Paste the whole link."; return; }
+    applyShared(sh);
+    $("shareNotice").textContent = "Loaded " + sh.roster.length + " players.";
+  });
+  var incoming = decodeShare(location.href);
+  if (incoming) {
+    $("incomingText").textContent = "This link has a roster of " + incoming.roster.length + " players" + (incoming.home ? " for " + incoming.home : "") + ". Replace the roster on this device with it? Shots stay as they are.";
+    $("incoming").hidden = false;
+    $("incomingYes").addEventListener("click", function () { applyShared(incoming); $("incoming").hidden = true; $("countNotice").textContent = "Roster loaded."; });
+    $("incomingNo").addEventListener("click", function () { $("incoming").hidden = true; });
+  }
 
   $("homeName").value = state.home || "";
   $("awayName").value = state.away || "";
